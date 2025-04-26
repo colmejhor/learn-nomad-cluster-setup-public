@@ -320,3 +320,99 @@ capability {
 EOM
 }
 
+# Terraform resoruce to attach CSI EFS volume to Nomad
+
+data "aws_subnets" "all" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+
+  # tags = {
+  #   Tier = "Private"
+  # }
+}
+
+resource "aws_efs_file_system" "nomad" {}
+
+resource "aws_efs_mount_target" "nomad_efs" {
+  for_each       = toset(data.aws_subnets.all.ids)
+  file_system_id = aws_efs_file_system.nomad.id
+  subnet_id      = each.value
+  security_groups = [ aws_security_group.efs.id ]
+}
+
+resource "aws_security_group" "efs" {
+  name        = "allow_nfs"
+  description = "Allow NFS inbound traffic"
+  vpc_id      = data.aws_vpc.default.id
+
+  ingress {
+    description = "TLS from VPC"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [ "0.0.0.0/0" ]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "allow_tls"
+  }
+}
+
+output "efs_volume" {
+    value = <<EOM
+# volume registration
+id = "jenkins_efs"
+name = "jenkins_efs"
+type = "csi"
+plugin_id = "aws-efs"
+
+capability {
+  access_mode     = "single-node-writer"
+  attachment_mode = "file-system"
+}
+
+parameters {
+  provisioningMode = "efs-ap"
+  fileSystemId = "${aws_efs_file_system.nomad.id}"
+  directoryPerms = "700"
+  gidRangeStart = "1000"
+  gidRangeEnd = "2000"
+}
+EOM
+}
+
+
+# output "efs_volume" {
+#     value = <<EOM
+# # volume registration
+# id = "efs0"
+# name = "efs0"
+# type = "csi"
+# plugin_id = "aws-efs"
+# capacity_max = "1G"
+# capacity_min = "1M"
+
+# capability {
+#   access_mode     = "single-node-writer"
+#   attachment_mode = "file-system"
+# }
+
+# parameters {
+#   provisioningMode = "efs-ap"
+#   fileSystemId = "<insert-your-efs-id>"
+#   directoryPerms = "700"
+#   gidRangeStart = "1000"
+#   gidRangeEnd = "2000"
+#   basePath = "/test"
+# }
+# EOM
+# }
