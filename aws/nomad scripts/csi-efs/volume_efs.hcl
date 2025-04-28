@@ -1,11 +1,12 @@
 # volume registration
-id = "jenkins_efs"
-name = "jenkins_efs"
+id = "fs-014870fcedfd1c584"
+name = "fs-014870fcedfd1c584"
 type = "csi"
-plugin_id = "aws-efs"
+plugin_id = "aws-efs0"
 
 capability {
-  access_mode     = "single-node-writer"
+  # access_mode     = "single-node-writer"
+  access_mode     = "multi-node-multi-writer"
   attachment_mode = "file-system"
 }
 

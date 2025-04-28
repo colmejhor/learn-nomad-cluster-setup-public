@@ -322,6 +322,11 @@ EOM
 
 # Terraform resoruce to attach CSI EFS volume to Nomad
 
+resource "aws_iam_role_policy_attachment" "efs_mount_policy" {
+  role       = aws_iam_role.instance_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonElasticFileSystemClientFullAccess"
+}
+
 data "aws_subnets" "all" {
   filter {
     name   = "vpc-id"
